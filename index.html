@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>GH User Repos</title>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Simple webpage to show GitHub user repositories.">
+
+        <!-- Scripts -->
+        <script src="https://unpkg.com/htmx.org"></script>
+        <script src="https://unpkg.com/htmx.org/dist/ext/client-side-templates.js"></script>
+        <script src="https://unpkg.com/mustache@latest"></script>
+
+        <!-- HTMX CORS fix -->
+        <div hx-on="htmx:configRequest: event.detail.headers='';" /> 
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/dark.css" />
+    </head>
+
+    <body>
+
+        <h1>GH User Repos</h1>
+
+        <form action='/' method="GET" style="display: flex; gap: 5px; align-items: center;">
+            <input type="text" name="username" placeholder="GitHub username..." />
+            <button type="submit">Search</button>
+        </form>
+
+        <hr /> 
+
+        <div hx-ext="client-side-templates">
+            <div
+                hx-get="https://api.github.com/users/"
+                hx-trigger="revealed"
+
+                hx-on='htmx:configRequest: event.detail.path = event.detail.path + (new URLSearchParams(location.search).get("username") ?? "github")'
+                hx-on::after-request='document.getElementById("total-page").innerText = Math.ceil(parseInt(document.getElementById("repo-count").innerText) / 25)'
+
+                mustache-template="user-template"
+            >
+                <template id="user-template">
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <a 
+                            href="{{ html_url }}"
+                            target="_blank"
+                            style="font-size: 35px;"
+                        >
+                            {{ login }}
+                        </a>
+
+                        <small>
+                            {{ bio }}
+                        </small>
+
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <h4>Public repo count:</h4>
+                            <h4 id="repo-count">{{ public_repos }}</h4>
+                        </div>
+                    </div>
+
+                    <hr />
+                </template>
+            </div>
+
+            <div>
+
+                <div
+                    id="content"
+
+                    hx-get="https://api.github.com/users/"
+                    hx-on='htmx:configRequest: event.detail.path = event.detail.path + (new URLSearchParams(location.search).get("username") ?? "github") + "/repos?per_page=25"'
+                    hx-vals='js:{"page": document.getElementById("page").innerText}'
+
+                    hx-trigger="revealed"
+
+                    mustache-array-template="repo-template"
+                ></div>
+
+                <template id="repo-template">
+                    {{#data}}
+                        <li>
+                            <a 
+                                href="{{ html_url }}"
+                                target="_blank"
+                            >
+                                {{ name }}
+                            </a>
+                            <br />
+                        </li>
+                    {{/data}}
+                </template>
+
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <h4>Page:</h3>
+                    <h4 id="page">1</h4>
+                    <h4>/</h4>
+                    <h4 id="total-page">1</h4>
+                </div>
+
+                <button
+                    hx-get="https://api.github.com/users/"
+                    hx-on='htmx:configRequest: event.detail.path = event.detail.path + (new URLSearchParams(location.search).get("username") ?? "github") + "/repos?per_page=25"'
+                    hx-vals='js:{"page": document.getElementById("page").innerText}'
+
+                    hx-trigger="click"
+                    hx-target="#content"
+
+                    mustache-array-template="repo-template"
+
+                    onclick='parseInt(document.getElementById("page").innerText) !== 1 && (document.getElementById("page").innerText = parseInt(document.getElementById("page").innerText) - 1)'
+                >
+                   < Prev
+                </button>
+                <button
+                    hx-get="https://api.github.com/users/"
+                    hx-on='htmx:configRequest: event.detail.path = event.detail.path + (new URLSearchParams(location.search).get("username") ?? "github") + "/repos?per_page=25"'
+                    hx-vals='js:{"page": document.getElementById("page").innerText}'
+
+                    hx-trigger="click"
+                    hx-target="#content"
+
+                    mustache-array-template="repo-template"
+
+                    onclick='parseInt(document.getElementById("page").innerText) < parseInt(document.getElementById("total-page").innerText) && (document.getElementById("page").innerText = parseInt(document.getElementById("page").innerText) + 1)'
+                >
+                    Next >
+                </button>
+                
+            </div>
+        </div>
+
+    </body>
+</html>
